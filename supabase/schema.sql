@@ -1,12 +1,14 @@
 -- Control de Actividades y Proyectos
--- Ejecutar en el SQL Editor de Supabase (proyecto helena)
+-- Esquema: helena
+-- Ejecutar en SQL Editor (proyecto helena)
 
--- Crear esquema propio
-create schema if not exists helena;
+-- Permisos mínimos para tablas en esquema public usadas por auth;
+CREATE OR REPLACE FUNCTION helena.try_grant_auth_schema() RETURNS void LANGUAGE sql AS $$ BEGIN NULL; END; $$;
 
-set search_path = helena, public;
+CREATE SCHEMA IF NOT EXISTS helena;
 
--- 1) Perfiles de usuario con roles
+ALTER ROLE postgres IN DATABASE postgres SET search_path = helena, public;
+
 create table if not exists helena.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
@@ -21,7 +23,6 @@ alter table helena.profiles enable row level security;
 create policy "Users read own profile" on helena.profiles for select using (auth.uid() = id);
 create policy "Users update own profile" on helena.profiles for update using (auth.uid() = id);
 
--- 2) Proyectos con información de negocio
 create table if not exists helena.projects (
   id uuid default gen_random_uuid() primary key,
   name text not null,
@@ -72,7 +73,6 @@ create policy "Admins delete project" on helena.projects for delete using (
   )
 );
 
--- 3) Miembros de proyecto con roles específicos
 create table if not exists helena.project_members (
   id uuid default gen_random_uuid() primary key,
   project_id uuid references helena.projects(id) on delete cascade not null,
@@ -100,7 +100,6 @@ create policy "Managers manage members" on helena.project_members for all using 
   )
 );
 
--- 4) Tareas con costos estimados
 create table if not exists helena.tasks (
   id uuid default gen_random_uuid() primary key,
   project_id uuid references helena.projects(id) on delete cascade not null,
@@ -160,7 +159,6 @@ create policy "Managers delete tasks" on helena.tasks for delete using (
   )
 );
 
--- 5) Registro de horas por tarea y usuario
 create table if not exists helena.time_entries (
   id uuid default gen_random_uuid() primary key,
   task_id uuid references helena.tasks(id) on delete cascade not null,
@@ -186,7 +184,6 @@ create policy "Users create own entries" on helena.time_entries for insert with 
 create policy "Users update own entries" on helena.time_entries for update using (user_id = auth.uid());
 create policy "Users delete own entries" on helena.time_entries for delete using (user_id = auth.uid());
 
--- 6) Tarifas por usuario para cálculo de costos
 create table if not exists helena.user_cost_rates (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade unique not null,
@@ -212,7 +209,6 @@ create policy "Managers manage rates" on helena.user_cost_rates for all using (
   )
 );
 
--- 7) Trigger para updated_at automático
 create or replace function helena.set_updated_at()
 returns trigger as $$
 begin
@@ -227,20 +223,19 @@ create trigger set_projects_updated_at before update on helena.projects for each
 drop trigger if exists set_tasks_updated_at on helena.tasks;
 create trigger set_tasks_updated_at before update on helena.tasks for each row execute procedure helena.set_updated_at();
 
--- 8) Datos iniciales de prueba
-insert into helena.profiles (id, email, role)
+insert into helena.profiles (id, email, display_name, role)
 values
-  ('00000000-0000-0000-0000-000000000001', 'admin@example.com', 'admin'),
-  ('00000000-0000-0000-0000-000000000002', 'manager@example.com', 'manager'),
-  ('00000000-0000-0000-0000-000000000003', 'member@example.com', 'member')
+  ('00000000-0000-0000-0000-000000000001', 'admin@example.com', 'Admin Demo', 'admin'),
+  ('00000000-0000-0000-0000-000000000002', 'manager@example.com', 'Manager Demo', 'manager'),
+  ('00000000-0000-0000-0000-000000000003', 'member@example.com', 'Miembro Demo', 'member')
 on conflict (id) do nothing;
 
 insert into helena.projects (id, name, slug, description, status, created_by)
 values
   ('00000000-0000-0000-0000-000000000101', 'Bluewayone', 'bluewayone', 'Proyecto Bluewayone', 'active', '00000000-0000-0000-0000-000000000002'),
-  ('00000000-0000-0000-0000-000000000102', 'kalu', 'kalu', 'Proyecto kalu', 'active', '00000000-0000-0000-0000-000000000002'),
-  ('00000000-0000-0000-0000-000000000103', 'cronos', 'cronos', 'Proyecto cronos', 'paused', '00000000-0000-0000-0000-000000000002'),
-  ('00000000-0000-0000-0000-000000000104', 'lanudo', 'lanudo', 'Proyecto lanudo', 'active', '00000000-0000-0000-0000-000000000002')
+  ('00000000-0000-0000-0000-000000000102', 'kalu', 'kalu', 'Proyecto kalu', 'active', '00000000-0000-0000-0000-000000000102'),
+  ('00000000-0000-0000-0000-000000000103', 'cronos', 'cronos', 'Proyecto cronos', 'paused', '00000000-0000-0000-0000-000000000102'),
+  ('00000000-0000-0000-0000-000000000104', 'lanudo', 'lanudo', 'Proyecto lanudo', 'active', '00000000-0000-0000-0000-000000000102')
 on conflict (id) do nothing;
 
 insert into helena.project_members (project_id, user_id, role)
