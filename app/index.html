@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Control de Actividades y Proyectos</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f6f7fb; color: #0f172a; }
+header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#0f172a; color:#fff; position:sticky; top:0; z-index:20; }
+header .brand { font-weight:700; letter-spacing:0.2px; }
+header .sub { color:#93a3b8; font-size:12px; margin-top:2px; }
+.container { max-width: 1100px; margin: 0 auto; padding: 18px; }
+#app { display:none; }
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tab { padding: 8px 12px; border-radius: 10px; background:#fff; border:1px solid #e2e8f0; cursor: pointer; color:#334155; font-weight: 600; font-size: 13px; }
+.tab.active { background:#0f172a; color:#fff; border-color:#0f172a; }
+.panel { display:none; }
+.panel.active { display:block; }
+.card { background:#fff; border:1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+.card h3 { margin: 0 0 8px; font-size: 15px; color:#0f172a; }
+.row { display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+input, select, textarea { padding: 10px 12px; border-radius: 10px; border:1px solid #e2e8f0; background:#fff; color:#0f172a; font-size: 14px; min-width: 0; }
+button { padding: 10px 14px; border-radius: 10px; border:0; background:#0f172a; color:#fff; font-weight:600; cursor: pointer; }
+.badge { display:inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background:#e2e8f0; color:#334155; }
+.badge.ok { background:#dcfce7; color:#14532d; }
+.badge.warn { background:#fef9c3; color:#713f12; }
+.badge.err { background:#fee2e2; color:#7f1d1d; }
+.empty { color:#64748b; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand">Control de Actividades y Proyectos</div>
+    <div class="sub">Registro de tareas, horas y costos</div>
+  </div>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <span id="roleBadge" class="badge" style="color:#0f172a">—</span>
+    <button class="secondary" onclick="logout()">Cerrar sesión</button>
+  </div>
+</header>
+<div id="app" class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="go('projects')">Proyectos</button>
+    <button class="tab" onclick="go('tasks')">Tareas</button>
+    <button class="tab" onclick="go('hours')">Horas</button>
+    <button class="tab" onclick="go('costs')">Costos</button>
+  </div>
+  <div id="panel-projects" class="panel active">
+    <div class="card">
+      <h3>Nuevo proyecto</h3>
+      <div class="row">
+        <input id="pName" placeholder="Nombre" />
+        <input id="pSlug" placeholder="Slug" />
+        <input id="pDesc" placeholder="Descripción" />
+        <select id="pStatus"><option>active</option><option>paused</option><option>archived</option></select>
+        <input id="pClient" placeholder="Cliente" />
+        <input id="pBudget" type="number" min="0" step="0.01" placeholder="Presupuesto" />
+        <select id="pCurrency"><option>CLP</option><option>USD</option><option>EUR</option></select>
+        <button onclick="createProject()">Crear</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Proyectos</h3>
+      <div id="projectsList" class="empty">Cargando...</div>
+    </div>
+  </div>
+  <div id="panel-tasks" class="panel">
+    <div class="card">
+      <h3>Nueva tarea</h3>
+      <div class="row">
+        <select id="tProject"></select>
+        <input id="tTitle" placeholder="Título" />
+        <textarea id="tDesc" placeholder="Descripción"></textarea>
+        <select id="tStatus"><option>todo</option><option>doing</option><option>done</option></select>
+        <input id="tPriority" placeholder="Prioridad" />
+        <input id="tEst" type="number" min="0" step="0.25" placeholder="Hs estimadas" />
+        <select id="tCostType"><option>hourly</option><option>fixed</option></select>
+        <input id="tCostValue" type="number" min="0" step="0.01" placeholder="Costo" />
+        <button onclick="createTask()">Crear</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Tareas</h3>
+      <div id="tasksList" class="empty">Cargando...</div>
+    </div>
+  </div>
+  <div id="panel-hours" class="panel">
+    <div class="card">
+      <h3>Registrar horas</h3>
+      <div class="row">
+        <select id="hTask"></select>
+        <input id="hDate" type="date" />
+        <input id="hHours" type="number" min="0" step="0.25" placeholder="Horas" />
+        <input id="hNotes" placeholder="Notas" />
+        <button onclick="createTimeEntry()">Guardar</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Registro de horas</h3>
+      <div id="hoursList" class="empty">Cargando...</div>
+    </div>
+  </div>
+  <div id="panel-costs" class="panel">
+    <div class="card">
+      <h3>Tarifas por usuario</h3>
+      <div class="row">
+        <select id="cUser"></select>
+        <input id="cRate" type="number" min="0" step="0.01" placeholder="Tarifa por hora" />
+        <select id="cCurrency"><option>CLP</option><option>USD</option></select>
+        <button onclick="upsertRate()">Guardar</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Resumen de costos por proyecto</h3>
+      <div id="costsSummary" class="empty">Cargando...</div>
+    </div>
+  </div>
+</div>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  const SUPABASE_URL = '__SUPABASE_URL__';
+  const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let me = null;
+
+  async function init() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) { alert('Necesitás iniciar sesión'); return; }
+    me = await getProfile(user.id);
+    if (!me) me = { role: 'member' };
+    document.getElementById('roleBadge').textContent = me.role;
+    await loadProjects();
+    await loadProjectsSelect();
+    await loadTasks();
+    await loadTasksSelect();
+    await loadTimeEntries();
+    await loadRates();
+    await loadCosts();
+  }
+
+  async function getProfile(id) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', id).single();
+    return data || null;
+  }
+
+  async function loadProjects() {
+    const { data } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+    const el = document.getElementById('projectsList');
+    el.innerHTML = !data?.length ? '<div class="empty">Sin proyectos</div>' : data.map(p => 
+      '<div class="card" style="padding:10px"><strong>' + esc(p.name) + '</strong><br/><small>' + esc(p.description || '') + '</small><br/><span class="badge ' + statusClass(p.status) + '">' + esc(p.status) + '</span></div>'
+    ).join('');
+  }
+
+  async function loadProjectsSelect() {
+    const { data } = await supabase.from('projects').select('id,name');
+    const el = document.getElementById('tProject');
+    if (!el) return;
+    el.innerHTML = (data || []).map(p => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+  }
+
+  async function createProject() {
+    const name = document.getElementById('pName').value || '';
+    const slug = document.getElementById('pSlug').value || '';
+    const description = document.getElementById('pDesc').value || '';
+    const status = document.getElementById('pStatus').value || 'active';
+    const client = document.getElementById('pClient').value || '';
+    const budget = toNum(document.getElementById('pBudget').value);
+    const currency = document.getElementById('pCurrency').value || 'CLP';
+    if (!name) return alert('Nombre requerido');
+    const { error } = await supabase.from('projects').insert([{ name, slug, description, status, client, budget, currency, created_by: me?.id }]);
+    if (error) return alert(error.message);
+    document.getElementById('pName').value = '';
+    document.getElementById('pSlug').value = '';
+    document.getElementById('pDesc').value = '';
+    document.getElementById('pClient').value = '';
+    document.getElementById('pBudget').value = '';
+    loadProjects();
+  }
+
+  async function loadTasks() {
+    const { data } = await supabase.from('tasks').select('*, projects(name)').order('created_at', { ascending: false });
+    const el = document.getElementById('tasksList');
+    el.innerHTML = !data?.length ? '<div class="empty">Sin tareas</div>' : data.map(t =>
+      '<div class="card" style="padding:10px"><strong>' + esc(t.title) + '</strong><br/><small>' + esc(t.projects?.name || '') + '</small><br/><span class="badge ' + statusClass(t.status) + '">' + esc(t.status) + '</span> <span class="badge">' + esc(t.priority || '') + '</span></div>'
+    ).join('');
+  }
+
+  async function createTask() {
+    const project_id = document.getElementById('tProject').value;
+    const title = document.getElementById('tTitle').value || '';
+    const description = document.getElementById('tDesc').value || '';
+    const status = document.getElementById('tStatus').value || 'todo';
+    const priority = document.getElementById('tPriority').value || 'medium';
+    const estimated_hours = toNum(document.getElementById('tEst').value);
+    const cost_type = document.getElementById('tCostType').value || 'hourly';
+    const cost_value = toNum(document.getElementById('tCostValue').value);
+    if (!title || !project_id) return alert('Título y proyecto requeridos');
+    const { error } = await supabase.from('tasks').insert([{ project_id, title, description, status, priority, estimated_hours, cost_type, cost_value }]);
+    if (error) return alert(error.message);
+    document.getElementById('tTitle').value = '';
+    document.getElementById('tDesc').value = '';
+    document.getElementById('tEst').value = '';
+    document.getElementById('tCostValue').value = '';
+    loadTasks();
+  }
+
+  async function loadTasksSelect() {
+    const { data } = await supabase.from('tasks').select('id,title,project_id');
+    const el = document.getElementById('hTask');
+    if (!el) return;
+    el.innerHTML = (data || []).map(t => '<option value="' + t.id + '">' + esc(t.title) + ' (' + esc(t.project_id) + ')</option>').join('');
+  }
+
+  async function loadTimeEntries() {
+    const { data } = await supabase.from('time_entries').select('*').order('date', { ascending: false });
+    const el = document.getElementById('hoursList');
+    el.innerHTML = !data?.length ? '<div class="empty">Sin registros</div>' : data.map(e =>
+      '<div class="card" style="padding:10px"><strong>' + esc(e.task_id) + '</strong> - ' + esc(e.date) + ' - ' + esc(e.hours) + 'h<br/><small>' + esc(e.notes || '') + '</small></div>'
+    ).join('');
+  }
+
+  async function createTimeEntry() {
+    const task_id = document.getElementById('hTask').value;
+    const date = document.getElementById('hDate').value;
+    const hours = toNum(document.getElementById('hHours').value);
+    const notes = document.getElementById('hNotes').value || '';
+    if (!task_id || !date || !hours) return alert('Tarea, fecha y horas requeridas');
+    const { data: task } = await supabase.from('tasks').select('project_id').eq('id', task_id).single();
+    const project_id = task?.project_id;
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('time_entries').insert([{ task_id, project_id, user_id: user.id, date, hours, notes }]);
+    if (error) return alert(error.message);
+    document.getElementById('hHours').value = '';
+    document.getElementById('hNotes').value = '';
+    loadTimeEntries();
+  }
+
+  async function loadRates() {
+    const { data } = await supabase.from('user_cost_rates').select('*');
+    const el = document.getElementById('cUser');
+    if (!el) return;
+    el.innerHTML = (data || []).map(r => '<option value="' + r.user_id + '">' + esc(r.user_id) + '</option>').join('');
+  }
+
+  async function upsertRate() {
+    const user_id = document.getElementById('cUser').value || me?.id;
+    const rate = toNum(document.getElementById('cRate').value);
+    const currency = document.getElementById('cCurrency').value || 'CLP';
+    if (!user_id) return alert('Usuario requerido');
+    const { error } = await supabase.from('user_cost_rates').upsert([{ user_id, rate, currency }], { onConflict: ['user_id'] });
+    if (error) return alert(error.message);
+    document.getElementById('cRate').value = '';
+    loadRates();
+  }
+
+  async function loadCosts() {
+    const { data } = await supabase.from('time_entries').select('*, tasks(title,cost_type,cost_value,project_id), projects(name,currency,budget)');
+    const el = document.getElementById('costsSummary');
+    el.innerHTML = !data?.length ? '<div class="empty">Sin datos de costos</div>' : data.map(e =>
+      '<div class="card" style="padding:10px"><strong>' + esc(e.tasks?.projects?.name || '') + '</strong><br/>' + esc(e.tasks?.title || '') + ' - ' + esc(e.hours) + 'h - ' + esc(e.tasks?.cost_type || '') + ' ' + esc(e.tasks?.cost_value || '') + '</div>'
+    ).join('');
+  }
+
+  function go(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.toLowerCase().includes(tab)));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function statusClass(s) { return s === 'active' ? 'ok' : s === 'paused' ? 'warn' : 'err'; }
+  function toNum(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+  async function logout() { await supabase.auth.signOut(); location.reload(); }
+
+  const hash = location.hash.replace('#','');
+  if (hash) go(hash);
+  init();
+</script>
+</body>
+</html>

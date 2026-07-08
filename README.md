@@ -1,14 +1,22 @@
 # Control de Actividades y Proyectos
 
-App web para registro de tareas, horas, seguimiento de proyectos y evaluación de costos.
+App web multi-usuario para registro de tareas, horas, seguimiento de proyectos y evaluación de costos.
 
 ## Stack
 - Backend: Supabase (PostgreSQL + Auth + RLS)
-- Frontend: HTML/JS vanilla (despliegue en Vercel)
-- Repo: wilsonbarraza-db/control-de-actividades-y-proyectos
+- Frontend: HTML/JS vanilla en app/index.html
+- Despliegue: Vercel
 
-## Schema
-Ejecutar supabase/schema.sql en el SQL Editor de Supabase.
+## Pasos
+1. Crear proyecto en Supabase
+2. Ejecutar supabase/schema.sql en SQL Editor
+3. Configurar Auth en Supabase (Email/Google/etc.)
+4. Reemplazar en app/index.html:
+   - __SUPABASE_URL__
+   - __SUPABASE_ANON_KEY__
+5. Push a Vercel
 
-## Configuración
-Reemplazar placeholders en app/index.html con tu SUPABASE_URL y SUPABASE_ANON_KEY.
+## Rol inicial
+- El primer usuario creado se le asigna role = 'manager'
+- admin/manager pueden crear proyectos y asignar miembros
+- member puede ver proyectos asignados y cargar horas
