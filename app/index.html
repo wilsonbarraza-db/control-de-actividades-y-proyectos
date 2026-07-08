@@ -121,8 +121,8 @@ button { padding: 10px 14px; border-radius: 10px; border:0; background:#0f172a; 
 <script type="module">
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
   const SUPABASE_URL = 'https://ddceookrynnuieodczzy.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_seoaWOGKv5qDJ4IyvHieHg_Jdk-eH_N';
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkY2Vvb2tyeW5udWllb2Rjenp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NjQyMjMsImV4cCI6MjA5OTA0MDIyM30.u_KD8IoHzieDVRgYDm7VmH4NdKfumwcbV-u54VHNLL0';
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { schema: 'helena' });
   let me = null;
 
   async function init() {
